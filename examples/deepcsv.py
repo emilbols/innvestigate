@@ -115,9 +115,8 @@ analysis = analyzer.analyze(x)
 #weights = analysis[selection]
 
 weights = analysis
-row_sums = np.std(weights,axis=1)
-row_means = np.mean(weights,axis=1)
-weights = (weights-row_means[:,None]) / row_sums[:,None]
+row_sums = np.sum(np.abs(weights),axis=1)
+weights = weights / row_sums[:,None]
 weights = weights[~np.isnan(weights).any(axis=1)]
 mean = np.mean(weights,axis=0)
 arguments = np.argsort(mean)
@@ -191,20 +190,17 @@ labels = ['jet_pt', 'jet_eta','TagVarCSV_jetNSecondaryVertices',
           'TagVarCSV_flightDistance3dSig']
 
 
-kong = []
-std_kong = []
+lables_sorted = []
+labels_std_sorted = []
 for n in range(0, len(arguments)):
-                   kong.append(labels[arguments[n]])
-                   std_kong.append(labels[std_args[n]])
+                   lables_sorted.append(labels[arguments[n]])
+                   labels_std_sorted.append(labels[std_args[n]])
                    
 even = np.linspace(1,66,66)
 plt.errorbar(even,mean_sorted,std_sorted)
-plt.xticks(even, kong, rotation=90)
+plt.xticks(even, lables_sorted, rotation=90)
 plt.show()
 plt.errorbar(even,mean_std_sorted,std_std_sorted)
-plt.xticks(even, std_kong, rotation=90)
-plt.show()
-plt.plot(even,weights[567])
-plt.xticks(even, labels, rotation=90)
+plt.xticks(even, labels_std_sorted, rotation=90)
 plt.show()
 
