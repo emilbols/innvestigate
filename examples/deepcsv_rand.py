@@ -28,6 +28,13 @@ def softmax(x):
                    e_x = np.exp((x.transpose()-x.max(axis=1)).transpose())
                    return e_x / np.sum(e_x,axis=1)[:,None]
 
+def rms(x):
+                   """Compute softmax values for each sets of scores in x."""
+                   n = x.shape[0]
+                   sqsum = ( np.square(x).sum(axis=0) )
+                   return np.sqrt(sqsum/n)
+
+
 def apply_modifications(model, custom_objects=None):
                    """Applies modifications to the model layers to create a new Graph. For example, simply changing
                    `model.layers[idx].activation = new activation` does not change the graph. The entire graph needs to be updated                                             
@@ -73,14 +80,12 @@ def heatmap(X):
 eutils = imp.load_source("utils", "utils.py")
 imgnetutils = imp.load_source("utils_imagenet", "utils_imagenet.py")
 
-x = np.load('DataStuff/Numpy_ttBar/ttBarDeepCSV_features_0.npy')
-y = np.load('DataStuff/Numpy_ttBar/ttBarDeepCSV_truth_0.npy')
+x = np.load('DataStuff/Numpy_RandDeepCSV/RandDeepCSVNumpy_features_0.npy')
+y = np.load('DataStuff/Numpy_RandDeepCSV/RandDeepCSVNumpy_truth_0.npy')
 x = x[:400000]
 y = y[:400000]
-
-#model=load_model('DataStuff/small_DeepCSV.h5')
-model=load_model('DataStuff/DeepCSV_in_cmssw_nosoftmax.h5')
-#model=load_model('DataStuff/DeepCSV_model7_nosoftmax.h5')
+#DeepCSVwithRandInput_nosoftmax.h5
+model=load_model('DataStuff/EarlyStoppedModel_nosoftmax.h5')
 #model = load_model('DataStuff/YetAnotherDeepCSV_nosoftmax.h5')
 #model.save_weights('DataStuff/my_model_weights.h5')
 #model_nosoftmax.load_weights('DataStuff/my_model_weights.h5')
@@ -108,20 +113,23 @@ plt.yscale("log")
 plt.show()
 
 
-analyzer = innvestigate.create_analyzer("lrp.sequential_preset_b", model,epsilon = 1)
+analyzer = innvestigate.create_analyzer("lrp.sequential_preset_b", model, epsilon = 1)
+#analyzer = innvestigate.create_analyzer("gradient", model)
 analysis = analyzer.analyze(x)
-#selection = (( (y[:,0] == 1) | (y[:,1] == 1) ) & ( (comparison[:,0] + comparison[:,1]) > 0.7) )
-#selection = (( (y[:,0] == 1) | (y[:,1] == 1) ) & ( (comparison[:,3]) > 0.7) )
+#selection = (( (y[:,2] == 1) ) & ( (comparison[:,0]) > 0.8) )
+#selection = (( (y[:,0] == 1) | (y[:,1] == 1) ) & ( (comparison[:,0]+comparison[:,1]) > 0.7) )
 #weights = analysis[selection]
-
 weights = analysis
-row_sums = np.sum(np.abs(weights),axis=1)
-lal = row_sums > 1000
-testo = pred[lal]
 
+#row_sums = np.sum(np.abs(weights),axis=1)
 #weights = weights / row_sums[:,None]
 #weights = weights[~np.isnan(weights).any(axis=1)]
+
 mean = np.mean(weights,axis=0)
+w_rms = rms(weights)
+rms_args = np.argsort(w_rms)
+w_rms_sort = w_rms[rms_args[:]]
+
 arguments = np.argsort(mean)
 std = np.std(weights,axis=0)
 std_args = np.argsort(std)
@@ -129,6 +137,7 @@ mean_sorted = mean[arguments[:]]
 std_sorted = std[arguments[:]]
 mean_std_sorted = mean[std_args[:]]
 std_std_sorted = std[std_args[:]]
+covariance = np.cov(weights.transpose())
 
 
 labels = ['jet_pt', 'jet_eta','TagVarCSV_jetNSecondaryVertices',
@@ -137,6 +146,7 @@ labels = ['jet_pt', 'jet_eta','TagVarCSV_jetNSecondaryVertices',
           'TagVarCSV_trackSip2dSigAboveCharm', 'TagVarCSV_trackSip3dValAboveCharm',
           'TagVarCSV_trackSip3dSigAboveCharm', 'TagVarCSV_jetNSelectedTracks',
           'TagVarCSV_jetNTracksEtaRel',
+          'jet_rand',
           'track1_TagVarCSVTrk_trackJetDistVal',
           'track2_TagVarCSVTrk_trackJetDistVal',
           'track3_TagVarCSVTrk_trackJetDistVal',
@@ -179,6 +189,12 @@ labels = ['jet_pt', 'jet_eta','TagVarCSV_jetNSecondaryVertices',
           'track4_TagVarCSVTrk_trackDecayLenVal',
           'track5_TagVarCSVTrk_trackDecayLenVal',
           'track6_TagVarCSVTrk_trackDecayLenVal',
+          'track1_rand',
+          'track2_rand',
+          'track3_rand',
+          'track4_rand',
+          'track5_rand',
+          'track6_rand',
           'track1_TagVarCSV_trackEtaRel',
           'track2_TagVarCSV_trackEtaRel',
           'track3_TagVarCSV_trackEtaRel',
@@ -193,17 +209,35 @@ labels = ['jet_pt', 'jet_eta','TagVarCSV_jetNSecondaryVertices',
           'TagVarCSV_flightDistance3dSig']
 
 
-lables_sorted = []
-labels_std_sorted = []
+kong = []
+std_kong = []
+rms_kong = []
 for n in range(0, len(arguments)):
-                   lables_sorted.append(labels[arguments[n]])
-                   labels_std_sorted.append(labels[std_args[n]])
+                   kong.append(labels[arguments[n]])
+                   std_kong.append(labels[std_args[n]])
+                   rms_kong.append(labels[rms_args[n]])
                    
-even = np.linspace(1,66,66)
+even = np.linspace(1,73,73)
+koop = np.linspace(0,72,73)
+
 plt.errorbar(even,mean_sorted,std_sorted)
-plt.xticks(even, lables_sorted, rotation=90)
+plt.xticks(even, kong, rotation=90)
 plt.show()
 plt.errorbar(even,mean_std_sorted,std_std_sorted)
-plt.xticks(even, labels_std_sorted, rotation=90)
+plt.xticks(even, std_kong, rotation=90)
 plt.show()
+plt.plot(even,w_rms_sort)
+plt.xticks(even, rms_kong, rotation=90)
+plt.show()
+fig, ax1 = plt.subplots(1,1)
 
+plt.figure(figsize=(14,14))
+plt.imshow(np.log(covariance), cmap='jet', interpolation='nearest')
+plt.xticks(koop, labels, rotation=90)
+plt.yticks(koop, labels)
+plt.savefig("corr.png")
+#ax1.set_xticks(even)
+#ax1.set_yticks(even)
+#ax1.set_xticklabels(labels)
+#ax1.set_yticklabels(labels)
+plt.show()
