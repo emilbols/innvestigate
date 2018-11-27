@@ -76,6 +76,7 @@ a = 0
 b = 299
 events = 20000
 firsttime = True
+analyzer = innvestigate.create_analyzer("lrp.sequential_preset_b", model)
 while b < events:
         print(a, " to ", b)
         while a < b:
@@ -86,7 +87,6 @@ while b < events:
                 y0_temp = y0[a:b,:]
                 inputs = [x_global_temp,x_cpf_temp,x_npf_temp,x_sv_temp]
                 pred_temp = model.predict(inputs)
-                analyzer = innvestigate.create_analyzer("lrp.sequential_preset_b", model)
                 analysis = analyzer.analyze(inputs)
                 if firsttime:
                         global_w = analysis[0]
